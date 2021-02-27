@@ -23,8 +23,8 @@
 import curses
 from curses import panel
 import requests
+import yaml
 
-my_symbols = ["PLTR","XOM","VTSAX","VIGAX","GC=F","BTC-USD", "GME"]
 yahoo_fields = ["symbol","regularMarketPrice","regularMarketChange","regularMarketChangePercent"]
 yahoo_url = "https://query1.finance.yahoo.com/v7/finance/quote?lang=en-US&region=US&corsDomain=finance.yahoo.com"
 yahoo_chart_url = "https://query1.finance.yahoo.com/v8/finance/chart/"
@@ -150,7 +150,7 @@ def print_chart(w, data, chart_height, scr_width):
     # For each datapoint, calculate the height on the chart.
     # Remove offset of min_val since we want to focus on all points above it.
     # Find the ratio of this value to max value.
-    #Finally, multiply by the chart height.
+    # Finally, multiply by the chart height.
     for o,c in zip(opens,closes):
         y_open = int((o - min_val) / (max_val - min_val) * chart_height)
         y_close = int((c - min_val) / (max_val - min_val) * chart_height)
@@ -171,13 +171,13 @@ def print_chart(w, data, chart_height, scr_width):
     w.addstr(chart_height-1, len(opens), f"${min_val:.2f}")
 
     # Print extra details at bottom
-    w.addstr(chart_height, 0, f"{name} --- Range:{period} Interval:{interval}")
+    w.addstr(chart_height, 0, f"{name} | Range:{period} Interval:{interval}")
 
 def format_row(symbol, width):
-    columns = [{"title":"Symbol ","key":"name","width":8,"form":"{}"},
+    columns = [{"title":"Symbol ","key":"name","width":8,"form":"{:7}"},
                {"title":"  Price $ ","key":"price","width":10,"form":"{:6.2f}"},
-               {"title":"  Change  ","key":"change","width":10,"form":":6.2f"},
-               {"title":" (%) ","key":"change_per","width":6,"form":":3.2f"},]
+               {"title":"  Change  ","key":"change","width":10,"form":"{:6.2f}"},
+               {"title":" (%) ","key":"change_per","width":6,"form":"{:3.2f}"},]
     ret = ""
 
     for col in columns:
@@ -187,7 +187,7 @@ def format_row(symbol, width):
 
         key = col['key']
         val = symbol[key]
-        ret += col['form'].format(val) + "|"
+        ret += col['form'].format(val) + " |"
 
     return ret
 
@@ -203,11 +203,11 @@ class chart_menu(object):
         self.position = 0
         self.symbol = symbol
         self.items = []
-        self.items.append(["1d", "2m"])
-        self.items.append(["1wk", "30m"])
-        self.items.append(["1mo", "90m"])
-        self.items.append(["1y", "1wk"])
-        self.items.append(["5y", "1mo"])
+        self.items.append(["1d", "2m", "Day"])
+        self.items.append(["1wk", "30m", "Week"])
+        self.items.append(["1mo", "90m", "Month"])
+        self.items.append(["1y", "1wk", "Year"])
+        self.items.append(["5y", "1mo", "5 Year"])
 
     def navigate(self, n):
         self.position += n
@@ -219,7 +219,7 @@ class chart_menu(object):
     def display(self):
         height, width = self.window.getmaxyx()
         # Must shrink chart_height if it won't fit with the menu height
-        chart_height = min(20, height - len(self.items) - 1)
+        chart_height = min(25, height - len(self.items) - 1)
         self.panel.top()
         self.panel.show()
         self.window.clear()
@@ -237,7 +237,7 @@ class chart_menu(object):
                 else:
                     mode = curses.A_NORMAL
 
-                msg = "%d. %s" % (index, item)
+                msg = " - %s" % (item[2])
                 self.window.addstr(chart_height + 1 + index, 1, msg, mode)
 
             key = self.window.getch()
@@ -305,7 +305,7 @@ class Menu(object):
 
                 msg = format_row(symbol, width)
                 #msg = "%d. %s" % (index, symbol['name'])
-                self.window.addstr(2 + index, 1, msg, mode)
+                self.window.addstr(2 + index, 0, msg, mode)
 
             key = self.window.getch()
 
@@ -331,6 +331,11 @@ class MyApp(object):
     def __init__(self, stdscreen):
         self.screen = stdscreen
         curses.curs_set(0)
+
+        # Read config file and get list of symbols
+        with open("cfg_stocker.yaml", 'r') as stream:
+            out = yaml.load(stream)
+            my_symbols = out['symbols']
 
         main_menu = Menu(my_symbols, self.screen)
         main_menu.display()
