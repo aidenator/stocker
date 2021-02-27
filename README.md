@@ -11,6 +11,11 @@ TODO
 * Exit the graph view with Q or Esc.
 * Exit the program from the main view with Q or Esc.
 
+## Configure
+Edit the cfg_stocker.yaml file and change the list of symbols to your liking.
+
+The order in the YAML file is the order they will appear in the program.
+
 ## How?
 This uses Yahoo Finance's undocumented API. Hopefully they won't care too much. Thanks Yahoo.
 
